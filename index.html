@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Scenic 52 - PAO Stack Trainer</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --card-inner: #0f172a;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --border: #334155;
+      --red-card: #ef4444;
+      --black-card: #f8fafc;
+      --success: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 12px; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px 8px; border-bottom: 1px solid var(--border); }
+    h1 { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+    .counter { font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .tab-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 2px; font-size: 0.72rem; border-radius: 6px; cursor: pointer; text-align: center; }
+    .tab-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); }
+
+    .settings-bar { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.78rem; }
+    .toggle-group { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+    .card-display { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 14px; min-height: 340px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; position: relative; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .card-pip { font-size: 4rem; line-height: 1; font-weight: 800; margin-top: 6px; }
+    .suit-red { color: var(--red-card); }
+    .suit-black { color: var(--black-card); }
+    
+    .card-subtext { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; }
+
+    .pao-group { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+    .pao-row { background: var(--card-inner); border-radius: 6px; padding: 7px 10px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.03); }
+    .pao-title { font-size: 0.68rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; width: 60px; text-align: left; }
+    .pao-val { text-align: right; font-weight: 600; flex: 1; }
+
+    .hidden-blur { filter: blur(9px); opacity: 0.2; user-select: none; transition: filter 0.15s ease, opacity 0.15s ease; }
+    .revealed { filter: none; opacity: 1; }
+
+    .nav-controls { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 8px; margin-top: 2px; }
+    button.btn { border: none; border-radius: 8px; padding: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    button.btn-main { background: var(--accent); color: #000; }
+    button.btn-main:active { background: var(--accent-hover); }
+    button.btn-sub { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
+
+    .table-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; overflow-y: auto; max-height: 480px; font-size: 0.75rem; width: 100%; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { background: #0f172a; position: sticky; top: 0; color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Scenic 52 Trainer</h1>
+    <span id="counter" class="counter">Card 1 / 52</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchMode('study')">Study</button>
+    <button class="tab-btn" onclick="switchMode('drill')">Card → PAO</button>
+    <button class="tab-btn" onclick="switchMode('reverse')">PAO → Card</button>
+    <button class="tab-btn" onclick="switchMode('table')">Full Roster</button>
+  </div>
+
+  <div class="settings-bar">
+    <label class="toggle-group">
+      <input type="checkbox" id="shuffleToggle" onchange="toggleShuffle(this.checked)"> Random Drill
+    </label>
+    <label class="toggle-group">
+      <input type="checkbox" id="metronomeToggle" onchange="toggleMetronome(this.checked)"> Metronome (<span id="bpmLabel">3s</span>)
+    </label>
+  </div>
+
+  <div id="flashcardArea" class="card-display" onclick="handleCardClick()">
+    <div>
+      <div id="cardPip" class="card-pip suit-black">4♣</div>
+      <div id="cardSub" class="card-subtext">Mnemonica #1 • Even (Male)</div>
+    </div>
+
+    <div class="pao-group" id="paoGroup">
+      <div class="pao-row">
+        <span class="pao-title">Person</span>
+        <span id="paoP" class="pao-val">Aristotle</span>
+      </div>
+      <div class="pao-row">
+        <span class="pao-title">Action</span>
+        <span id="paoA" class="pao-val">Scratching</span>
+      </div>
+      <div class="pao-row">
+        <span class="pao-title">Object</span>
+        <span id="paoO" class="pao-val">Beard</span>
+      </div>
+      <div class="pao-row">
+        <span class="pao-title">Stop / IP</span>
+        <span id="paoStop" class="pao-val" style="color: var(--accent);">Stop #1 (Front Door) • Initials: A</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="tableArea" class="table-container" style="display: none;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Card</th>
+          <th>IP</th>
+          <th>Person</th>
+          <th>Action</th>
+          <th>Object</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="nav-controls" id="navControls">
+    <button class="btn btn-sub" onclick="prevCard()">&#8592; Prev</button>
+    <button class="btn btn-main" id="centerActionBtn" onclick="handleCardClick()">Reveal / Next</button>
+    <button class="btn btn-sub" onclick="nextCard()">Next &#8594;</button>
+  </div>
+</div>
+
+<script>
+const lociStops = [
+  "Front Door (1-3)", "Dining Table (4-6)", "Kitchen Sink (7-9)", "Side Door (10-12)",
+  "Toaster (13-15)", "Bathroom (16-18)", "Main Room (19-21)", "Thermostat (22-24)",
+  "Spare Room (25-27)", "Basement Door (28-30)", "Basement Stairs (31-33)", "Downstairs Office (34-36)",
+  "Washing Machine (37-39)", "Workshop Table (40-42)", "Workshop Couch (43-45)", "Downstairs Kitchen (46-48)",
+  "Front Yard (49-51)", "Inside Car (52)"
+];
+
+const deck = [
+  { idx: 1, code: "A", card: "4♣", suit: "♣", isRed: false, p: "Aristotle", a: "Scratching", o: "Beard" },
+  { idx: 2, code: "B", card: "2♥", suit: "♥", isRed: true, p: "Brutus", a: "Stabbing", o: "Heart" },
+  { idx: 3, code: "C", card: "7♦", suit: "♦", isRed: true, p: "Cher", a: "Polishing", o: "Diamonds" },
+  { idx: 4, code: "D", card: "3♣", suit: "♣", isRed: false, p: "Princess Diana", a: "Pedaling", o: "Bicycle" },
+  { idx: 5, code: "G", card: "4♥", suit: "♥", isRed: true, p: "Andre the Giant", a: "Counting", o: "Trees" },
+  { idx: 6, code: "S", card: "6♦", suit: "♦", isRed: true, p: "Severus Snape", a: "Scowling at", o: "Crystal Ball" },
+  { idx: 7, code: "J", card: "A♠", suit: "♠", isRed: false, p: "Yourself", a: "Dealing", o: "Cards" },
+  { idx: 8, code: "H", card: "5♥", suit: "♥", isRed: true, p: "Hermione Granger", a: "Falling from", o: "Bridge" },
+  { idx: 9, code: "N", card: "9♠", suit: "♠", isRed: false, p: "Nana (Grandmother)", a: "Baking", o: "Cookies" },
+  { idx: 10, code: "AO", card: "2♠", suit: "♠", isRed: false, p: "Alex Ovechkin", a: "Slap-shotting", o: "Hockey Puck" },
+  { idx: 11, code: "AA", card: "Q♥", suit: "♥", isRed: true, p: "Amy Amy Winehouse", a: "Singing into", o: "Wineglass" },
+  { idx: 12, code: "AB", card: "3♦", suit: "♦", isRed: true, p: "Amanda Bynes", a: "Screaming into", o: "Telephone" },
+  { idx: 13, code: "AC", card: "Q♣", suit: "♣", isRed: false, p: "Alice Cooper", a: "Biting", o: "Chicken" },
+  { idx: 14, code: "AD", card: "8♥", suit: "♥", isRed: true, p: "Alexandre Dumas", a: "Swinging", o: "Sword" },
+  { idx: 15, code: "AG", card: "6♠", suit: "♠", isRed: false, p: "Ali G", a: "Smoking", o: "Cigarette" },
+  { idx: 16, code: "AS", card: "5♠", suit: "♠", isRed: false, p: "Arya Stark", a: "Stabbing with", o: "Needle (Sword)" },
+  { idx: 17, code: "AJ", card: "9♥", suit: "♥", isRed: true, p: "Angelina Jolie", a: "Firing", o: "Handgun" },
+  { idx: 18, code: "AH", card: "K♣", suit: "♣", isRed: false, p: "Adolf Hitler", a: "Swallowing", o: "Poison" },
+  { idx: 19, code: "AN", card: "2♦", suit: "♦", isRed: true, p: "Alfred Nobel", a: "Lighting", o: "Firework" },
+  { idx: 20, code: "BO", card: "J♥", suit: "♥", isRed: true, p: "Barack Obama", a: "Signing", o: "Document" },
+  { idx: 21, code: "BA", card: "3♠", suit: "♠", isRed: false, p: "Björk (the Artist)", a: "Singing in", o: "Swan Dress" },
+  { idx: 22, code: "BB", card: "8♠", suit: "♠", isRed: false, p: "Bilbo Baggins", a: "Walking with", o: "Stick" },
+  { idx: 23, code: "BC", card: "6♥", suit: "♥", isRed: true, p: "Benedict Cumberbatch", a: "Casting spells with", o: "Sling Ring" },
+  { idx: 24, code: "BD", card: "10♣", suit: "♣", isRed: false, p: "Bob Dylan", a: "Strumming", o: "Guitar" },
+  { idx: 25, code: "BG", card: "5♦", suit: "♦", isRed: true, p: "Bee Gees", a: "Typing on", o: "Keyboard" },
+  { idx: 26, code: "BS", card: "K♦", suit: "♦", isRed: true, p: "Bart Simpson", a: "Pushing", o: "Skateboard" },
+  { idx: 27, code: "BJ", card: "2♣", suit: "♣", isRed: false, p: "Bon Jovi", a: "Screaming into", o: "Microphone" },
+  { idx: 28, code: "BH", card: "3♥", suit: "♥", isRed: true, p: "Bess Houdini", a: "Putting", o: "Golf Ball" },
+  { idx: 29, code: "BN", card: "8♦", suit: "♦", isRed: true, p: "Bill Nye", a: "Exploding", o: "Test Tube" },
+  { idx: 30, code: "CO", card: "5♣", suit: "♣", isRed: false, p: "Coco Chanel", a: "Jumping on", o: "Couch" },
+  { idx: 31, code: "CA", card: "K♠", suit: "♠", isRed: false, p: "Criss Angel", a: "Climbing", o: "Pyramid" },
+  { idx: 32, code: "CB", card: "J♦", suit: "♦", isRed: true, p: "Charlie Brown", a: "Kicking", o: "Football" },
+  { idx: 33, code: "CC", card: "8♣", suit: "♣", isRed: false, p: "Charlie Chaplin", a: "Dancing on", o: "Stage" },
+  { idx: 34, code: "CD", card: "10♠", suit: "♠", isRed: false, p: "Charles Dickens", a: "Sharpening", o: "Pencil" },
+  { idx: 35, code: "CG", card: "K♥", suit: "♥", isRed: true, p: "Cary Grant", a: "Twirling", o: "Hat" },
+  { idx: 36, code: "CS", card: "J♣", suit: "♣", isRed: false, p: "Cobie Smulders", a: "Sniping from", o: "Helicarrier" },
+  { idx: 37, code: "CJ", card: "7♠", suit: "♠", isRed: false, p: "Catherine Zeta-Jones", a: "Touching", o: "Toes" },
+  { idx: 38, code: "CH", card: "10♥", suit: "♥", isRed: true, p: "Charlton Heston", a: "Whipping", o: "Horse" },
+  { idx: 39, code: "CN", card: "A♦", suit: "♦", isRed: true, p: "Chuck Norris", a: "Breaking", o: "Nunchucks" },
+  { idx: 40, code: "DO", card: "4♠", suit: "♠", isRed: false, p: "Duke Nukem", a: "Cocking", o: "Shotgun" },
+  { idx: 41, code: "DA", card: "7♥", suit: "♥", isRed: true, p: "Diane Abbott", a: "Banging", o: "Parliament Gavel" },
+  { idx: 42, code: "DB", card: "4♦", suit: "♦", isRed: true, p: "David Blaine", a: "Running through", o: "River" },
+  { idx: 43, code: "DC", card: "A♣", suit: "♣", isRed: false, p: "David Copperfield", a: "Flying", o: "Airplane" },
+  { idx: 44, code: "DD", card: "9♣", suit: "♣", isRed: false, p: "Dee Dee", a: "Smashing", o: "Big Red Button" },
+  { idx: 45, code: "DG", card: "J♠", suit: "♠", isRed: false, p: "Donald Glover", a: "Moonwalking through", o: "Warehouse" },
+  { idx: 46, code: "DS", card: "Q♦", suit: "♦", isRed: true, p: "Danielle Steel", a: "Reading", o: "Novel" },
+  { idx: 47, code: "DJ", card: "7♣", suit: "♣", isRed: false, p: "Dakota Johnson", a: "Snapping", o: "Handcuffs" },
+  { idx: 48, code: "DH", card: "Q♠", suit: "♠", isRed: false, p: "Daryl Hannah", a: "Hugging", o: "Statue" },
+  { idx: 49, code: "DN", card: "10♦", suit: "♦", isRed: true, p: "Duke Nukem (Alt: Robert De Niro)", a: "Pointing keys at", o: "Taxi Mirror" },
+  { idx: 50, code: "GO", card: "6♣", suit: "♣", isRed: false, p: "George Orwell", a: "Filming with", o: "Camera" },
+  { idx: 51, code: "GA", card: "A♥", suit: "♥", isRed: true, p: "Giorgio Armani", a: "Shining", o: "Flashlight" },
+  { idx: 52, code: "GB", card: "9♦", suit: "♦", isRed: true, p: "Queen Elizabeth (GB)", a: "Pressing", o: "Nuke Button" }
+];
+
+let order = deck.map((_, i) => i);
+let currentPos = 0;
+let currentMode = 'study';
+let isRevealed = true;
+let isShuffled = false;
+let metronomeTimer = null;
+
+function renderCurrent() {
+  const item = deck[order[currentPos]];
+  const stopIndex = Math.floor((item.idx - 1) / 3);
+  const stopDesc = lociStops[stopIndex];
+  
+  document.getElementById('counter').innerText = `Deck: ${currentPos + 1} / 52 (Stack #${item.idx})`;
+  
+  const pipEl = document.getElementById('cardPip');
+  pipEl.innerText = item.card;
+  pipEl.className = `card-pip ${item.isRed ? 'suit-red' : 'suit-black'}`;
+  
+  const valParity = (item.idx === 18 || item.idx === 31 || item.idx === 35) ? 'Odd (King)' : 
+                    (item.idx === 11 || item.idx === 13 || item.idx === 46 || item.idx === 48) ? 'Even (Queen)' : 
+                    (item.idx === 7 || item.idx === 39 || item.idx === 43 || item.idx === 51) ? 'Odd (Ace)' : 'Value Parity';
+
+  document.getElementById('cardSub').innerText = `Mnemonica #${item.idx} • ${valParity}`;
+  document.getElementById('paoP').innerText = item.p;
+  document.getElementById('paoA').innerText = item.a;
+  document.getElementById('paoO').innerText = item.o;
+  document.getElementById('paoStop').innerText = `Stop #${stopIndex + 1}: ${stopDesc} • IP: ${item.code}`;
+
+  applyBlur();
+}
+
+function applyBlur() {
+  const paoGroup = document.getElementById('paoGroup');
+  const cardPip = document.getElementById('cardPip');
+  const cardSub = document.getElementById('cardSub');
+
+  if (currentMode === 'study') {
+    paoGroup.className = 'pao-group revealed';
+    cardPip.className = `card-pip ${deck[order[currentPos]].isRed ? 'suit-red' : 'suit-black'} revealed`;
+    cardSub.className = 'card-subtext revealed';
+  } else if (currentMode === 'drill') {
+    cardPip.className = `card-pip ${deck[order[currentPos]].isRed ? 'suit-red' : 'suit-black'} revealed`;
+    cardSub.className = 'card-subtext revealed';
+    paoGroup.className = isRevealed ? 'pao-group revealed' : 'pao-group hidden-blur';
+  } else if (currentMode === 'reverse') {
+    paoGroup.className = 'pao-group revealed';
+    cardPip.className = isRevealed ? `card-pip ${deck[order[currentPos]].isRed ? 'suit-red' : 'suit-black'} revealed` : 'card-pip suit-black hidden-blur';
+    cardSub.className = isRevealed ? 'card-subtext revealed' : 'card-subtext hidden-blur';
+  }
+}
+
+function handleCardClick() {
+  if (currentMode === 'study') {
+    nextCard();
+    return;
+  }
+  if (!isRevealed) {
+    isRevealed = true;
+    applyBlur();
+  } else {
+    nextCard();
+  }
+}
+
+function nextCard() {
+  currentPos = (currentPos + 1) % order.length;
+  isRevealed = (currentMode === 'study');
+  renderCurrent();
+}
+
+function prevCard() {
+  currentPos = (currentPos - 1 + order.length) % order.length;
+  isRevealed = (currentMode === 'study');
+  renderCurrent();
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  const flashcard = document.getElementById('flashcardArea');
+  const table = document.getElementById('tableArea');
+  const controls = document.getElementById('navControls');
+
+  if (mode === 'table') {
+    flashcard.style.display = 'none';
+    controls.style.display = 'none';
+    table.style.display = 'block';
+    renderTable();
+  } else {
+    flashcard.style.display = 'flex';
+    controls.style.display = 'grid';
+    table.style.display = 'none';
+    isRevealed = (mode === 'study');
+    renderCurrent();
+  }
+}
+
+function toggleShuffle(checked) {
+  isShuffled = checked;
+  if (checked) {
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+  } else {
+    order = deck.map((_, i) => i);
+  }
+  currentPos = 0;
+  isRevealed = (currentMode === 'study');
+  renderCurrent();
+}
+
+function toggleMetronome(active) {
+  if (metronomeTimer) clearInterval(metronomeTimer);
+  if (active) {
+    metronomeTimer = setInterval(() => {
+      if (currentMode === 'study') {
+        nextCard();
+      } else {
+        if (!isRevealed) {
+          isRevealed = true;
+          applyBlur();
+        } else {
+          nextCard();
+        }
+      }
+    }, 3000);
+  }
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  deck.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.idx}</td>
+      <td style="font-weight:bold; color:${item.isRed ? '#ef4444' : '#f8fafc'}">${item.card}</td>
+      <td style="font-family:monospace; color:#38bdf8;">${item.code}</td>
+      <td>${item.p}</td>
+      <td>${item.a}</td>
+      <td>${item.o}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+renderCurrent();
+</script>
+</body>
+</html>
