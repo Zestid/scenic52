@@ -215,9 +215,9 @@ function renderCurrent() {
   pipEl.innerText = item.card;
   pipEl.className = `card-pip ${item.isRed ? 'suit-red' : 'suit-black'}`;
   
-  const valParity = (item.idx === 18 || item.idx === 31 || item.idx === 35) ? 'Odd (King)' : 
-                    (item.idx === 11 || item.idx === 13 || item.idx === 46 || item.idx === 48) ? 'Even (Queen)' : 
-                    (item.idx === 7 || item.idx === 39 || item.idx === 43 || item.idx === 51) ? 'Odd (Ace)' : 'Value Parity';
+const valParity = ['4♣','2♥','4♥','6♦','2♠','8♥','6♠','2♦','8♠','6♥','10♣','K♦','2♣','8♦','8♣','10♠','10♥','4♠','4♦','10♦','6♣'].includes(item.card)
+  ? 'Even (Male)'
+  : 'Odd (Female)';
 
   document.getElementById('cardSub').innerText = `Mnemonica #${item.idx} • ${valParity}`;
   document.getElementById('paoP').innerText = item.p;
